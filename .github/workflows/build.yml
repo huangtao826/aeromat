@@ -1,4 +1,4 @@
-name: Build Windows Executable
+name: Build Windows Distribution
 
 on:
   push:
@@ -24,22 +24,32 @@ jobs:
         run: |
           python -m venv venv
           .\venv\Scripts\pip.exe install --upgrade pip
-          .\venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
+          .\venv\Scripts\pip.exe install streamlit pandas plotly requests pyinstaller
 
-      - name: Build with PyInstaller
-        run: .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console --hidden-import streamlit --hidden-import plotly --hidden-import pandas --hidden-import requests app_launcher.py
-
-      - name: Prepare distribution
+      - name: Prepare distribution folder
         shell: cmd
         run: |
-          if exist dist\AeromatAI rmdir /s /q dist\AeromatAI
+          if exist dist rmdir /s /q dist
           mkdir dist\AeromatAI
-          xcopy /E /I dist\AeromatAI.exe dist\AeromatAI
+
+          :: 复制虚拟环境（排除缓存）
+          xcopy /E /I /Y venv dist\AeromatAI\venv
+
+          :: 复制应用文件
           copy app.py dist\AeromatAI\
+          copy app_launcher.py dist\AeromatAI\
           copy start.bat dist\AeromatAI\
-          xcopy /E /I knowledge dist\AeromatAI\knowledge
-          xcopy /E /I ui dist\AeromatAI\ui
-          xcopy /E /I config dist\AeromatAI\config
+
+          :: 复制知识库和配置
+          xcopy /E /I /Y knowledge dist\AeromatAI\knowledge
+          xcopy /E /I /Y ui dist\AeromatAI\ui
+          xcopy /E /I /Y config dist\AeromatAI\config
+
+          :: 创建启动脚本
+          echo @echo off > dist\AeromatAI\启动.bat
+          echo cd /d "%%~dp0" >> dist\AeromatAI\启动.bat
+          echo call venv\Scripts\activate.bat >> dist\AeromatAI\启动.bat
+          echo python -m streamlit run app.py --server.port 8501 >> dist\AeromatAI\启动.bat
 
       - name: Create zip archive
         shell: cmd
