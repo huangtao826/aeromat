@@ -29,15 +29,13 @@ jobs:
       - name: Build with PyInstaller
         run: .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console --hidden-import streamlit --hidden-import plotly --hidden-import pandas --hidden-import requests app_launcher.py
 
-      - name: Copy files to distribution folder
+      - name: Prepare distribution
         run: |
-          New-Item -ItemType Directory -Force -Path dist\AeromatAI
-          Copy-Item -Path dist\AeromatAI\* -Destination dist\AeromatAI\ -Recurse
-          Copy-Item -Path app.py -Destination dist\AeromatAI\
-          Copy-Item -Path start.bat -Destination dist\AeromatAI\
-          Copy-Item -Path knowledge -Destination dist\AeromatAI\ -Recurse
-          Copy-Item -Path ui -Destination dist\AeromatAI\ -Recurse
-          Copy-Item -Path config -Destination dist\AeromatAI\ -Recurse
+          Remove-Item -Path dist\AeromatAI -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path dist\AeromatAI | Out-Null
+          Get-ChildItem "dist\AeromatAI.exe" | Copy-Item -Destination "dist\AeromatAI\" -Recurse
+          Copy-Item app.py start.bat -Destination dist\AeromatAI\
+          Copy-Item knowledge ui config -Destination dist\AeromatAI\ -Recurse
 
       - name: Create zip archive
         run: Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip -Force
