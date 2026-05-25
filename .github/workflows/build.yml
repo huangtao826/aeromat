@@ -26,23 +26,33 @@ jobs:
           .\venv\Scripts\pip.exe install --upgrade pip
           .\venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
 
-      - name: Build with PyInstaller
-        run: .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console app_launcher.py
-
-      - name: Check build output
+      - name: Build with PyInstaller (include all dependencies)
         run: |
-          echo Build output:
-          Get-ChildItem dist\AeromatAI | Select-Object Name, Length
+          .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console ^
+            --add-data "app.py;." ^
+            --add-data "knowledge;knowledge" ^
+            --add-data "ui;ui" ^
+            --add-data "config;config" ^
+            --hidden-import streamlit ^
+            --hidden-import plotly ^
+            --hidden-import pandas ^
+            --hidden-import requests ^
+            --collect-all streamlit ^
+            --collect-all plotly ^
+            app_launcher.py
 
-      - name: Copy additional files
+      - name: Verify exe exists
         run: |
-          Copy-Item -Path app.py -Destination dist\AeromatAI\
-          Copy-Item -Path start.bat -Destination dist\AeromatAI\
+          if (Test-Path "dist\AeromatAI\AeromatAI.exe") {
+            Write-Host "[OK] AeromatAI.exe found"
+            Write-Host "Size: $((Get-Item 'dist\AeromatAI\AeromatAI.exe').Length / 1MB) MB"
+          } else {
+            Write-Host "[ERROR] exe not found"
+            Get-ChildItem dist -Recurse -Filter "*.exe"
+          }
 
       - name: Create zip archive
-        run: |
-          Remove-Item -Path dist\AeromatAI-Windows.zip -Force -ErrorAction SilentlyContinue
-          Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip -Force
+        run: Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip -Force
 
       - name: Upload Release Asset
         if: github.event_name == 'release'
