@@ -122,12 +122,19 @@ class LLMClient:
             response.raise_for_status()
             result = response.json()
 
+            # 检查返回内容是否有效
+            if "choices" not in result or len(result["choices"]) == 0:
+                return "错误：API返回内容为空"
+
+            assistant_msg = result["choices"][0]["message"]["content"]
+            if not assistant_msg or not isinstance(assistant_msg, str):
+                return "错误：API返回内容无效"
+
             # 记录历史
             self._messages.append({
                 "role": "user",
                 "content": messages[-1]["content"]
             })
-            assistant_msg = result["choices"][0]["message"]["content"]
             self._messages.append({
                 "role": "assistant",
                 "content": assistant_msg
@@ -142,8 +149,8 @@ class LLMClient:
             return "错误：请求超时，请检查网络连接"
         except requests.exceptions.RequestException as e:
             return f"错误：API请求失败 - {str(e)}"
-        except KeyError:
-            return f"错误：API返回格式异常 - {response.text}"
+        except (KeyError, ValueError, UnicodeDecodeError) as e:
+            return f"错误：处理响应失败 - {str(e)}"
 
     def _call_openai(self, messages: List[Dict], temperature: float, max_tokens: int) -> str:
         """调用 OpenAI API"""

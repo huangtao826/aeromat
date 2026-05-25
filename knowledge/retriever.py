@@ -5,6 +5,11 @@ import sys
 from pathlib import Path
 from typing import List, Dict, Optional
 
+# 设置标准编码
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 
 class KnowledgeRetriever:
     """知识库检索器 - 从文档和FAQ中检索相关内容"""
@@ -28,6 +33,18 @@ class KnowledgeRetriever:
         self.knowledge_dir = Path(knowledge_dir)
         self.docs_dir = self.knowledge_dir / "docs"
         self.faqs_dir = self.knowledge_dir / "faqs"
+
+    def _read_file_safe(self, file_path: Path) -> str:
+        """安全读取文件，处理编码问题"""
+        try:
+            return file_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            try:
+                return file_path.read_text(encoding="gbk")
+            except:
+                return ""
+        except Exception:
+            return ""
 
     def retrieve(self, query: str, top_k: int = 3, source: str = "all") -> List[Dict]:
         """
@@ -64,7 +81,9 @@ class KnowledgeRetriever:
         keywords = self._extract_keywords(query)
 
         for doc_file in docs_dir.glob("*.md"):
-            content = doc_file.read_text(encoding="utf-8")
+            content = self._read_file_safe(doc_file)
+            if not content:
+                continue
             relevance = self._calculate_relevance(query, keywords, content)
 
             if relevance > 0:
@@ -90,7 +109,9 @@ class KnowledgeRetriever:
         keywords = self._extract_keywords(query)
 
         for faq_file in faqs_dir.glob("*.md"):
-            content = faq_file.read_text(encoding="utf-8")
+            content = self._read_file_safe(faq_file)
+            if not content:
+                continue
             relevance = self._calculate_relevance(query, keywords, content)
 
             if relevance > 0:
@@ -116,6 +137,8 @@ class KnowledgeRetriever:
 
     def _calculate_relevance(self, query: str, keywords: List[str], content: str) -> float:
         """计算相关性分数"""
+        if not content:
+            return 0.0
         content_lower = content.lower()
         score = 0.0
 
@@ -133,7 +156,7 @@ class KnowledgeRetriever:
 
         return score
 
-    def format_results(self, results: List[Dict]) -> str:
+    def format_results(self, results: List[Dict], include_full: bool = True) -> str:
         """格式化检索结果为文本"""
         if not results:
             return ""
@@ -141,8 +164,21 @@ class KnowledgeRetriever:
         formatted = []
         for i, item in enumerate(results, 1):
             if item["type"] == "doc":
-                formatted.append(f"📄 **{item['title']}**\n{item['content']}...")
+                icon = "📄"
+                title = item['title']
             elif item["type"] == "faq":
-                formatted.append(f"❓ **{item['title']}**\n{item['content']}...")
+                icon = "❓"
+                title = item['title']
+            else:
+                icon = "📖"
+                title = item['title']
 
-        return "\n\n".join(formatted)
+            # 根据 include_full 决定返回内容
+            if include_full and 'full_content' in item:
+                content = item['full_content']
+            else:
+                content = item.get('content', item.get('full_content', ''))
+
+            formatted.append(f"{icon} **{title}**\n\n{content}")
+
+        return "\n\n---\n\n".join(formatted)

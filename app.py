@@ -23,6 +23,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from aeromat.agents import CoreAgent
+from aeromat.knowledge import KnowledgeRetriever
 from aeromat.ui.components.software_selector import (
     render_software_selector,
     render_software_badge,
@@ -30,11 +31,12 @@ from aeromat.ui.components.software_selector import (
     get_all_software_list
 )
 
-# 初始化Agent
+# 初始化Agent和知识库检索器
 if "core_agent" not in st.session_state:
     st.session_state.core_agent = CoreAgent()
     st.session_state.messages = []
     st.session_state.selected_software = None
+    st.session_state.knowledge_retriever = KnowledgeRetriever()
 
 # 侧边栏 - 软件选择器
 st.sidebar.markdown("---")
@@ -119,6 +121,15 @@ if user_input:
     intent = agent.recognize_intent(user_input)
     software_context = st.session_state.get("selected_software")
     response = agent.route_to_sub_agents(intent, user_input, software_context)
+
+    # 检索知识库相关结果
+    retriever = st.session_state.knowledge_retriever
+    knowledge_results = retriever.retrieve(user_input, top_k=3)
+
+    # 如果有高相关度的知识库结果，附加到回答
+    if knowledge_results and knowledge_results[0]["relevance"] >= 3.0:
+        kb_content = retriever.format_results(knowledge_results, include_full=True)
+        response += f"\n\n---\n\n## 📚 知识库答案\n\n{kb_content}"
 
     # 显示助手响应
     with st.chat_message("assistant"):

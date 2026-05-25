@@ -46,7 +46,8 @@ def main():
         subprocess.Popen(
             [sys.executable, '-m', 'streamlit', 'run', app_path,
              '--browser.gatherUsageStats', 'false',
-             '--server.port', '8501'],
+             '--server.port', '8501',
+             '--server.address', '0.0.0.0'],
             startupinfo=startupinfo
         )
 
