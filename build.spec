@@ -5,7 +5,7 @@ import sys
 import streamlit
 streamlit_path = os.path.dirname(streamlit.__file__)
 
-# 获取项目根目录（spec 文件所在目录）
+# 获取项目根目录
 project_root = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 block_cipher = None
@@ -24,10 +24,24 @@ a = Analysis(
         ('__init__.py', 'aeromat/__init__.py'),
         ('app.py', '.'),
         ('aeromat_banner.png', '.'),
+        # Streamlit 静态资源
         (os.path.join(streamlit_path, 'static'), 'streamlit/static'),
         (os.path.join(streamlit_path, 'runtime'), 'streamlit/runtime'),
+        # Streamlit 元数据（关键！）
+        (os.path.join(streamlit_path, '..', 'streamlit-*.dist-info'), 'streamlit-*.dist-info'),
     ],
     hiddenimports=[
+        # importlib.metadata 相关（关键！）
+        'importlib.metadata',
+        'importlib_metadata',
+        'importlib_metadata.distributions',
+        'importlib_metadata._itertools',
+        'importlib_metadata._functools',
+        'importlib_metadata._collections',
+        'importlib_metadata._text',
+        'importlib_metadata._meta',
+        'importlib_metadata._adapters',
+        # aeromat 包
         'aeromat',
         'aeromat.core',
         'aeromat.core.llm_client',
@@ -39,6 +53,7 @@ a = Analysis(
         'aeromat.ui',
         'aeromat.config',
         'aeromat.knowledge',
+        # Streamlit
         'streamlit',
         'streamlit.web.cli',
         'streamlit.runtime.scriptrunner.script_runner',
@@ -47,6 +62,36 @@ a = Analysis(
         'streamlit.runtime.state.session_state_proxy',
         'streamlit.runtime.metrics_util',
         'streamlit.web.server.server',
+        'streamlit.version',
+        'streamlit.config',
+        'streamlit.config_option',
+        'streamlit.config_util',
+        'streamlit.development',
+        'streamlit.env_util',
+        'streamlit.file_util',
+        'streamlit.git_util',
+        'streamlit.logger',
+        'streamlit.net_util',
+        'streamlit.platform',
+        'streamlit.string_util',
+        'streamlit.type_util',
+        'streamlit.url_util',
+        'streamlit.user_info',
+        'streamlit.util',
+        'streamlit.watcher',
+        'streamlit.source_util',
+        'streamlit.proto',
+        'streamlit.proto.BackMsg_pb2',
+        'streamlit.proto.ForwardMsg_pb2',
+        'streamlit.proto.Common_pb2',
+        'streamlit.proto.Delta_pb2',
+        'streamlit.proto.Element_pb2',
+        'streamlit.proto.NewSession_pb2',
+        'streamlit.proto.SessionEvent_pb2',
+        'streamlit.proto.SessionStatus_pb2',
+        'streamlit.proto.WidgetStates_pb2',
+        'streamlit.proto.openmetrics_data_model_pb2',
+        # 第三方库
         'plotly',
         'plotly.graph_objects',
         'plotly.express',
