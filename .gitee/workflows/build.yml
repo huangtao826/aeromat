@@ -1,0 +1,28 @@
+name: Gitee CI 构建
+
+on:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron: '0 2 * * *'  # 每周自动构建
+
+stages:
+  - build
+
+build:
+  stage: build
+  script:
+    - echo "开始构建 AeromatAI..."
+    - python --version
+    - python -m venv venv
+    - venv\Scripts\pip.exe install --upgrade pip
+    - venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
+    - echo "依赖安装完成"
+    - venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console app_launcher.py
+    - echo "PyInstaller 完成"
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 30 days
+  only:
+    - master

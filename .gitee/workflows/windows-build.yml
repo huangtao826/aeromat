@@ -1,0 +1,60 @@
+# Gitee 持续集成配置
+# 文件：.gitee/workflows/windows-build.yml
+
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron: '0 2 * * *'  # 每周自动构建
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Create venv
+      shell: cmd
+      run: |
+        python -m venv venv
+
+    - name: Install deps
+      shell: cmd
+      run: |
+        venv\Scripts\pip.exe install --upgrade pip
+        venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
+
+    - name: Build
+      shell: cmd
+      run: |
+        venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console ^
+          --add-data "knowledge;knowledge" ^
+          --add-data "ui;ui" ^
+          --add-data "config;config" ^
+          app_launcher.py
+
+    - name: Package
+      shell: cmd
+      run: |
+        mkdir dist\AeromatAI
+        xcopy /E /I dist\AeromatAI.exe dist\AeromatAI
+        copy app.py dist\AeromatAI\
+        copy start.bat dist\AeromatAI\
+        xcopy /E /I venv dist\AeromatAI\venv
+        powershell -Command "Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip"
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: AeromatAI-Windows
+        path: dist/AeromatAI-Windows.zip
