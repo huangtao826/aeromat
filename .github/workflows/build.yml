@@ -26,34 +26,29 @@ jobs:
       - name: Activate virtual environment
         run: |
           .\venv\Scripts\Activate.ps1
-
-      - name: Install dependencies
-        run: |
           .\venv\Scripts\pip.exe install --upgrade pip
           .\venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
 
       - name: Build with PyInstaller
         run: |
-          .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console ^
-            --add-data "knowledge;knowledge" ^
-            --add-data "ui;ui" ^
-            --add-data "config;config" ^
-            --add-data "agents;agents" ^
-            --add-data "core;core" ^
-            app_launcher.py
+          $ErrorActionPreference = 'Continue'
+          .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console --hidden-import streamlit --hidden-import plotly --hidden-import pandas --hidden-import requests app_launcher.py
 
       - name: Create distribution folder
         run: |
-          mkdir dist\AeromatAI
-          copy dist\AeromatAI.exe\* dist\AeromatAI\ /E
-          copy app.py dist\AeromatAI\
-          xcopy /E /I venv dist\AeromatAI\venv
-          copy start.bat dist\AeromatAI\
+          New-Item -ItemType Directory -Force -Path dist\AeromatAI | Out-Null
+          Copy-Item -Path dist\AeromatAI\* -Destination dist\AeromatAI\ -Recurse -Force
+          Copy-Item -Path app.py -Destination dist\AeromatAI\
+          Copy-Item -Path start.bat -Destination dist\AeromatAI\
+          Copy-Item -Path knowledge -Destination dist\AeromatAI\ -Recurse -Force
+          Copy-Item -Path ui -Destination dist\AeromatAI\ -Recurse -Force
+          Copy-Item -Path config -Destination dist\AeromatAI\ -Recurse -Force
+          Copy-Item -Path agents -Destination dist\AeromatAI\ -Recurse -Force
+          Copy-Item -Path core -Destination dist\AeromatAI\ -Recurse -Force
 
       - name: Create zip archive
         run: |
-          cd dist
-          powershell -Command "Compress-Archive -Path AeromatAI -DestinationPath AeromatAI-Windows.zip -Force"
+          Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip -Force
 
       - name: Upload Release Asset
         if: github.event_name == 'release'
