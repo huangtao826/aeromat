@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import shutil
 
 # 获取 streamlit 包路径
 import streamlit
@@ -106,24 +107,29 @@ a = Analysis(
     noarchive=False,
 )
 
-# 动态添加 streamlit dist-info
-dist_info_pattern = os.path.join(streamlit_path, '..', 'streamlit-*.dist-info')
-dist_info_paths = glob.glob(dist_info_pattern)
-
-for dist_info_path in dist_info_paths:
-    if os.path.isdir(dist_info_path):
-        dist_info_name = os.path.basename(dist_info_path)
-        a.datas.append((dist_info_path, dist_info_name))
-
-site_packages = os.path.dirname(streamlit_path)
-if os.path.exists(site_packages):
+# ===== 修复：动态添加 streamlit dist-info（只添加文件，不添加目录）=====
+def add_dist_info_files(analysis, streamlit_pkg_path):
+    """将 streamlit dist-info 目录中的文件添加到 datas，而不是目录本身"""
+    site_packages = os.path.dirname(streamlit_pkg_path)
+    
     for item in os.listdir(site_packages):
         if item.startswith('streamlit-') and item.endswith('.dist-info'):
-            full_path = os.path.join(site_packages, item)
-            if os.path.isdir(full_path):
-                already_added = any(d[0] == full_path for d in a.datas)
-                if not already_added:
-                    a.datas.append((full_path, item))
+            dist_info_dir = os.path.join(site_packages, item)
+            if not os.path.isdir(dist_info_dir):
+                continue
+            
+            # 遍历 dist-info 目录中的所有文件
+            for root, dirs, files in os.walk(dist_info_dir):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    # 计算相对路径作为目标路径
+                    rel_path = os.path.relpath(full_path, site_packages)
+                    # 添加到 datas (src, dest_dir)
+                    dest_dir = os.path.dirname(rel_path)
+                    analysis.datas.append((full_path, dest_dir))
+
+# 添加 streamlit dist-info 文件
+add_dist_info_files(a, streamlit_path)
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=cipher)
 
@@ -146,20 +152,14 @@ exe = EXE(
 )
 
 # ===== 关键修复：将 a.datas 从 2元组转换为 3元组 =====
-# PyInstaller 6.x 的 COLLECT 需要 3元组 (dest_name, src_name, typecode)
-# 但 a.datas 内部是 2元组 (src_path, dest_name)，需要转换
-
 converted_datas = []
 for item in a.datas:
     if len(item) == 2:
-        # 2元组 (src_path, dest_name) -> 3元组 (dest_name, src_path, 'DATA')
         src_path, dest_name = item
         converted_datas.append((dest_name, src_path, 'DATA'))
     elif len(item) == 3:
-        # 已经是3元组，直接使用
         converted_datas.append(item)
     else:
-        # 忽略格式不正确的
         print(f"Warning: skipping invalid datas item: {item}")
 
 a.datas = converted_datas
