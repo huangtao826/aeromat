@@ -30,15 +30,22 @@ jobs:
         run: .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console --hidden-import streamlit --hidden-import plotly --hidden-import pandas --hidden-import requests app_launcher.py
 
       - name: Prepare distribution
+        shell: cmd
         run: |
-          Remove-Item -Path dist\AeromatAI -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path dist\AeromatAI | Out-Null
-          Get-ChildItem "dist\AeromatAI.exe" | Copy-Item -Destination "dist\AeromatAI\" -Recurse
-          Copy-Item app.py start.bat -Destination dist\AeromatAI\
-          Copy-Item knowledge ui config -Destination dist\AeromatAI\ -Recurse
+          if exist dist\AeromatAI rmdir /s /q dist\AeromatAI
+          mkdir dist\AeromatAI
+          xcopy /E /I dist\AeromatAI.exe dist\AeromatAI
+          copy app.py dist\AeromatAI\
+          copy start.bat dist\AeromatAI\
+          xcopy /E /I knowledge dist\AeromatAI\knowledge
+          xcopy /E /I ui dist\AeromatAI\ui
+          xcopy /E /I config dist\AeromatAI\config
 
       - name: Create zip archive
-        run: Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip -Force
+        shell: cmd
+        run: |
+          cd dist
+          powershell -Command "Compress-Archive -Path AeromatAI -DestinationPath AeromatAI-Windows.zip -Force"
 
       - name: Upload Release Asset
         if: github.event_name == 'release'
