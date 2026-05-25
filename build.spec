@@ -16,18 +16,19 @@ a = Analysis(
     ['app_launcher.py'],
     pathex=[project_root],
     binaries=[],
+    # ===== 修复：datas 使用 2元组 (src, dest) =====
     datas=[
-        ('knowledge', 'aeromat/knowledge', 'DATA'),
-        ('ui', 'aeromat/ui', 'DATA'),
-        ('config', 'aeromat/config', 'DATA'),
-        ('agents', 'aeromat/agents', 'DATA'),
-        ('core', 'aeromat/core', 'DATA'),
-        ('__init__.py', 'aeromat/__init__.py', 'DATA'),
-        ('app.py', '.', 'DATA'),
-        ('aeromat_banner.png', '.', 'DATA'),
+        ('knowledge', 'aeromat/knowledge'),
+        ('ui', 'aeromat/ui'),
+        ('config', 'aeromat/config'),
+        ('agents', 'aeromat/agents'),
+        ('core', 'aeromat/core'),
+        ('__init__.py', 'aeromat/__init__.py'),
+        ('app.py', '.'),
+        ('aeromat_banner.png', '.'),
         # Streamlit 静态资源
-        (os.path.join(streamlit_path, 'static'), 'streamlit/static', 'DATA'),
-        (os.path.join(streamlit_path, 'runtime'), 'streamlit/runtime', 'DATA'),
+        (os.path.join(streamlit_path, 'static'), 'streamlit/static'),
+        (os.path.join(streamlit_path, 'runtime'), 'streamlit/runtime'),
     ],
     hiddenimports=[
         'importlib.metadata',
@@ -106,7 +107,7 @@ a = Analysis(
     noarchive=False,
 )
 
-# ===== 修复：动态添加 streamlit dist-info（正确的3元组格式）=====
+# ===== 修复：动态添加 streamlit dist-info（使用2元组格式）=====
 # 查找实际的 dist-info 目录
 dist_info_pattern = os.path.join(streamlit_path, '..', 'streamlit-*.dist-info')
 dist_info_paths = glob.glob(dist_info_pattern)
@@ -115,8 +116,8 @@ for dist_info_path in dist_info_paths:
     if os.path.isdir(dist_info_path):
         # 获取实际的目录名（不含通配符）
         dist_info_name = os.path.basename(dist_info_path)
-        # 正确的3元组格式：(src_path, dest_name, typecode)
-        a.datas.append((dist_info_path, dist_info_name, 'DATA'))
+        # 使用2元组格式：(src_path, dest_name)
+        a.datas.append((dist_info_path, dist_info_name))
 
 # 同时查找并添加 streamlit 的其他元数据目录
 site_packages = os.path.dirname(streamlit_path)
@@ -128,7 +129,7 @@ if os.path.exists(site_packages):
                 # 检查是否已添加（比较 src_path）
                 already_added = any(d[0] == full_path for d in a.datas)
                 if not already_added:
-                    a.datas.append((full_path, item, 'DATA'))
+                    a.datas.append((full_path, item))
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=cipher)
 
