@@ -5,8 +5,8 @@ import sys
 import streamlit
 streamlit_path = os.path.dirname(streamlit.__file__)
 
-# 获取当前目录（项目根目录）
-project_root = os.path.abspath(os.path.dirname(__file__))
+# 获取项目根目录（spec 文件所在目录）
+project_root = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 block_cipher = None
 cipher = None
@@ -16,24 +16,18 @@ a = Analysis(
     pathex=[project_root],
     binaries=[],
     datas=[
-        # 业务目录（保持 aeromat 包结构）
         ('knowledge', 'aeromat/knowledge'),
         ('ui', 'aeromat/ui'),
         ('config', 'aeromat/config'),
         ('agents', 'aeromat/agents'),
         ('core', 'aeromat/core'),
-        # 根目录下的 __init__.py（aeromat 包标识）
         ('__init__.py', 'aeromat/__init__.py'),
-        # 主应用文件
         ('app.py', '.'),
-        # 背景图片（如果有的话）
         ('aeromat_banner.png', '.'),
-        # Streamlit 前端静态资源（必须！）
         (os.path.join(streamlit_path, 'static'), 'streamlit/static'),
         (os.path.join(streamlit_path, 'runtime'), 'streamlit/runtime'),
     ],
     hiddenimports=[
-        # aeromat 包及其子模块
         'aeromat',
         'aeromat.core',
         'aeromat.core.llm_client',
@@ -45,7 +39,6 @@ a = Analysis(
         'aeromat.ui',
         'aeromat.config',
         'aeromat.knowledge',
-        # Streamlit 相关
         'streamlit',
         'streamlit.web.cli',
         'streamlit.runtime.scriptrunner.script_runner',
@@ -54,7 +47,6 @@ a = Analysis(
         'streamlit.runtime.state.session_state_proxy',
         'streamlit.runtime.metrics_util',
         'streamlit.web.server.server',
-        # 第三方库
         'plotly',
         'plotly.graph_objects',
         'plotly.express',
@@ -76,7 +68,6 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=cipher)
 
-# 单目录模式
 exe = EXE(
     pyz,
     a.scripts,
