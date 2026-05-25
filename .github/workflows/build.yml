@@ -23,24 +23,19 @@ jobs:
       - name: Create virtual environment and install dependencies
         run: |
           python -m venv venv
-          .env\Scripts\pip.exe install --upgrade pip
-          .env\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
+          .\venv\Scripts\pip.exe install --upgrade pip
+          .\venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
 
       - name: Build with PyInstaller using spec
         run: |
-          .env\Scripts\pyinstaller.exe build.spec --noconfirm
+          .\venv\Scripts\pyinstaller.exe build.spec --noconfirm
 
       - name: Verify build structure
         run: |
           Write-Host "=== 检查打包目录结构 ==="
-
-          $exePath = "dist\AeromatAI\AeromatAI.exe"
-          $appPath = "dist\AeromatAI\_internalpp.py"
-          $staticPath = "dist\AeromatAI\_internal\streamlit\static"
-          $aeromatPath = "dist\AeromatAI\_internaleromat"
-
           $errors = 0
-
+          
+          $exePath = "dist\AeromatAI\AeromatAI.exe"
           if (Test-Path $exePath) {
             $size = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
             Write-Host "[OK] AeromatAI.exe ($size MB)"
@@ -48,13 +43,8 @@ jobs:
             Write-Host "[ERROR] AeromatAI.exe 不存在！"
             $errors++
           }
-
-          if (Test-Path $appPath) {
-            Write-Host "[OK] app.py"
-          } else {
-            Write-Host "[WARN] app.py 不在 _internal 中"
-          }
-
+          
+          $staticPath = "dist\AeromatAI\_internal\streamlit\static"
           if (Test-Path $staticPath) {
             $count = (Get-ChildItem $staticPath -Recurse -File).Count
             Write-Host "[OK] streamlit/static ($count 文件)"
@@ -62,7 +52,8 @@ jobs:
             Write-Host "[ERROR] streamlit/static 缺失！"
             $errors++
           }
-
+          
+          $aeromatPath = "dist\AeromatAI\_internal\aeromat"
           if (Test-Path $aeromatPath) {
             $count = (Get-ChildItem $aeromatPath -Recurse -File).Count
             Write-Host "[OK] aeromat 包 ($count 文件)"
@@ -70,11 +61,11 @@ jobs:
             Write-Host "[ERROR] aeromat 包缺失！"
             $errors++
           }
-
+          
           if ($errors -gt 0) {
             exit 1
           }
-
+          
           Write-Host ""
           $total = [math]::Round((Get-ChildItem "dist\AeromatAI" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
           Write-Host "总大小: $total MB"
