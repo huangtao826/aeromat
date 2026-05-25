@@ -26,41 +26,34 @@ jobs:
           .\venv\Scripts\pip.exe install --upgrade pip
           .\venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
 
-      - name: Build with PyInstaller (include all dependencies)
+      - name: Build with PyInstaller
         run: |
-          .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console ^
-            --add-data "app.py;." ^
-            --add-data "knowledge;knowledge" ^
-            --add-data "ui;ui" ^
-            --add-data "config;config" ^
-            --hidden-import streamlit ^
-            --hidden-import plotly ^
-            --hidden-import pandas ^
-            --hidden-import requests ^
-            --collect-all streamlit ^
-            --collect-all plotly ^
-            app_launcher.py
+          $pyinstaller = ".\venv\Scripts\pyinstaller.exe"
+          $args = @(
+            "--onedir",
+            "--name", "AeromatAI",
+            "--console",
+            "--hidden-import", "streamlit",
+            "--hidden-import", "plotly",
+            "--hidden-import", "pandas",
+            "--hidden-import", "requests",
+            "--collect-all", "streamlit",
+            "--collect-all", "plotly",
+            "app_launcher.py"
+          )
+          & $pyinstaller $args
 
-      - name: Verify exe exists
+      - name: Verify exe
         run: |
           if (Test-Path "dist\AeromatAI\AeromatAI.exe") {
-            Write-Host "[OK] AeromatAI.exe found"
-            Write-Host "Size: $((Get-Item 'dist\AeromatAI\AeromatAI.exe').Length / 1MB) MB"
-          } else {
-            Write-Host "[ERROR] exe not found"
-            Get-ChildItem dist -Recurse -Filter "*.exe"
+            Write-Host "[OK] Found"
+            Write-Host "Size: $([math]::Round((Get-Item 'dist\AeromatAI\AeromatAI.exe').Length / 1MB, 2)) MB"
           }
 
-      - name: Create zip archive
+      - name: Create zip
         run: Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip -Force
 
-      - name: Upload Release Asset
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/AeromatAI-Windows.zip
-
-      - name: Upload Build Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AeromatAI-Windows
