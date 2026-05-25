@@ -16,7 +16,6 @@ a = Analysis(
     ['app_launcher.py'],
     pathex=[project_root],
     binaries=[],
-    # ===== 修复：datas 使用 2元组 (src, dest) =====
     datas=[
         ('knowledge', 'aeromat/knowledge'),
         ('ui', 'aeromat/ui'),
@@ -107,26 +106,21 @@ a = Analysis(
     noarchive=False,
 )
 
-# ===== 修复：动态添加 streamlit dist-info（使用2元组格式）=====
-# 查找实际的 dist-info 目录
+# 动态添加 streamlit dist-info
 dist_info_pattern = os.path.join(streamlit_path, '..', 'streamlit-*.dist-info')
 dist_info_paths = glob.glob(dist_info_pattern)
 
 for dist_info_path in dist_info_paths:
     if os.path.isdir(dist_info_path):
-        # 获取实际的目录名（不含通配符）
         dist_info_name = os.path.basename(dist_info_path)
-        # 使用2元组格式：(src_path, dest_name)
         a.datas.append((dist_info_path, dist_info_name))
 
-# 同时查找并添加 streamlit 的其他元数据目录
 site_packages = os.path.dirname(streamlit_path)
 if os.path.exists(site_packages):
     for item in os.listdir(site_packages):
         if item.startswith('streamlit-') and item.endswith('.dist-info'):
             full_path = os.path.join(site_packages, item)
             if os.path.isdir(full_path):
-                # 检查是否已添加（比较 src_path）
                 already_added = any(d[0] == full_path for d in a.datas)
                 if not already_added:
                     a.datas.append((full_path, item))
@@ -150,6 +144,25 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
+# ===== 关键修复：将 a.datas 从 2元组转换为 3元组 =====
+# PyInstaller 6.x 的 COLLECT 需要 3元组 (dest_name, src_name, typecode)
+# 但 a.datas 内部是 2元组 (src_path, dest_name)，需要转换
+
+converted_datas = []
+for item in a.datas:
+    if len(item) == 2:
+        # 2元组 (src_path, dest_name) -> 3元组 (dest_name, src_path, 'DATA')
+        src_path, dest_name = item
+        converted_datas.append((dest_name, src_path, 'DATA'))
+    elif len(item) == 3:
+        # 已经是3元组，直接使用
+        converted_datas.append(item)
+    else:
+        # 忽略格式不正确的
+        print(f"Warning: skipping invalid datas item: {item}")
+
+a.datas = converted_datas
 
 coll = COLLECT(
     exe,
