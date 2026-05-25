@@ -27,4 +27,4 @@ run.bat
 python build.py
 ```
 
-输出目录：`dist/AeromatAI/`
+输出目录：`dist/AeromatAI/`# aeromat
