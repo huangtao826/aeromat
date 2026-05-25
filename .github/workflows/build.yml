@@ -1,4 +1,4 @@
-name: Build Windows Distribution
+name: Build Windows Executable
 
 on:
   push:
@@ -24,44 +24,25 @@ jobs:
         run: |
           python -m venv venv
           .\venv\Scripts\pip.exe install --upgrade pip
-          .\venv\Scripts\pip.exe install streamlit pandas plotly requests pyinstaller
+          .\venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
 
-      - name: Prepare distribution folder
-        shell: cmd
+      - name: Build with PyInstaller
+        run: .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console app_launcher.py
+
+      - name: Check build output
         run: |
-          if exist dist rmdir /s /q dist
-          mkdir dist\AeromatAI
-          mkdir dist\AeromatAI\venv
-          mkdir dist\AeromatAI\knowledge
-          mkdir dist\AeromatAI\ui
-          mkdir dist\AeromatAI\config
+          echo Build output:
+          Get-ChildItem dist\AeromatAI | Select-Object Name, Length
 
-          :: 复制虚拟环境内容
-          xcopy /E /Y venv\Scripts dist\AeromatAI\venv\Scripts\
-          xcopy /E /Y venv\Lib dist\AeromatAI\venv\Lib\
-          copy venv\pyvenv.cfg dist\AeromatAI\venv\
-          copy venv\*.txt dist\AeromatAI\venv\
-
-          :: 复制应用文件
-          copy app.py dist\AeromatAI\
-          copy start.bat dist\AeromatAI\
-
-          :: 复制知识库和配置
-          xcopy /E /Y knowledge dist\AeromatAI\knowledge\
-          xcopy /E /Y ui dist\AeromatAI\ui\
-          xcopy /E /Y config dist\AeromatAI\config\
-
-          :: 列出复制结果
-          echo === 复制完成 ===
-          dir dist\AeromatAI\ /B
-          dir dist\AeromatAI\venv\ /B
+      - name: Copy additional files
+        run: |
+          Copy-Item -Path app.py -Destination dist\AeromatAI\
+          Copy-Item -Path start.bat -Destination dist\AeromatAI\
 
       - name: Create zip archive
-        shell: cmd
         run: |
-          cd dist
-          powershell -Command "Compress-Archive -Path AeromatAI -DestinationPath AeromatAI-Windows.zip -Force"
-          dir
+          Remove-Item -Path dist\AeromatAI-Windows.zip -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path dist\AeromatAI -DestinationPath dist\AeromatAI-Windows.zip -Force
 
       - name: Upload Release Asset
         if: github.event_name == 'release'
