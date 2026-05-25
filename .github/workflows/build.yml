@@ -1,0 +1,70 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Create virtual environment
+        run: python -m venv venv
+
+      - name: Activate virtual environment
+        run: |
+          .\venv\Scripts\Activate.ps1
+
+      - name: Install dependencies
+        run: |
+          .\venv\Scripts\pip.exe install --upgrade pip
+          .\venv\Scripts\pip.exe install streamlit pyinstaller pandas plotly requests
+
+      - name: Build with PyInstaller
+        run: |
+          .\venv\Scripts\pyinstaller.exe --onedir --name AeromatAI --console ^
+            --add-data "knowledge;knowledge" ^
+            --add-data "ui;ui" ^
+            --add-data "config;config" ^
+            --add-data "agents;agents" ^
+            --add-data "core;core" ^
+            app_launcher.py
+
+      - name: Create distribution folder
+        run: |
+          mkdir dist\AeromatAI
+          copy dist\AeromatAI.exe\* dist\AeromatAI\ /E
+          copy app.py dist\AeromatAI\
+          xcopy /E /I venv dist\AeromatAI\venv
+          copy start.bat dist\AeromatAI\
+
+      - name: Create zip archive
+        run: |
+          cd dist
+          powershell -Command "Compress-Archive -Path AeromatAI -DestinationPath AeromatAI-Windows.zip -Force"
+
+      - name: Upload Release Asset
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/AeromatAI-Windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AeromatAI-Windows
+          path: dist/AeromatAI-Windows.zip
