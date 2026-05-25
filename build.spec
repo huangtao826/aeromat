@@ -17,19 +17,17 @@ a = Analysis(
     pathex=[project_root],
     binaries=[],
     datas=[
-        ('knowledge', 'aeromat/knowledge'),
-        ('ui', 'aeromat/ui'),
-        ('config', 'aeromat/config'),
-        ('agents', 'aeromat/agents'),
-        ('core', 'aeromat/core'),
-        ('__init__.py', 'aeromat/__init__.py'),
-        ('app.py', '.'),
-        ('aeromat_banner.png', '.'),
+        ('knowledge', 'aeromat/knowledge', 'DATA'),
+        ('ui', 'aeromat/ui', 'DATA'),
+        ('config', 'aeromat/config', 'DATA'),
+        ('agents', 'aeromat/agents', 'DATA'),
+        ('core', 'aeromat/core', 'DATA'),
+        ('__init__.py', 'aeromat/__init__.py', 'DATA'),
+        ('app.py', '.', 'DATA'),
+        ('aeromat_banner.png', '.', 'DATA'),
         # Streamlit 静态资源
-        (os.path.join(streamlit_path, 'static'), 'streamlit/static'),
-        (os.path.join(streamlit_path, 'runtime'), 'streamlit/runtime'),
-        # ===== 修复：动态查找实际的 dist-info 目录名 =====
-        # 替代原来的 (os.path.join(streamlit_path, '..', 'streamlit-*.dist-info'), 'streamlit-*.dist-info'),
+        (os.path.join(streamlit_path, 'static'), 'streamlit/static', 'DATA'),
+        (os.path.join(streamlit_path, 'runtime'), 'streamlit/runtime', 'DATA'),
     ],
     hiddenimports=[
         'importlib.metadata',
@@ -108,7 +106,7 @@ a = Analysis(
     noarchive=False,
 )
 
-# ===== 修复：动态添加 streamlit dist-info（解决通配符问题）=====
+# ===== 修复：动态添加 streamlit dist-info（正确的3元组格式）=====
 # 查找实际的 dist-info 目录
 dist_info_pattern = os.path.join(streamlit_path, '..', 'streamlit-*.dist-info')
 dist_info_paths = glob.glob(dist_info_pattern)
@@ -117,18 +115,20 @@ for dist_info_path in dist_info_paths:
     if os.path.isdir(dist_info_path):
         # 获取实际的目录名（不含通配符）
         dist_info_name = os.path.basename(dist_info_path)
-        a.datas.append((dist_info_path, dist_info_name))
+        # 正确的3元组格式：(src_path, dest_name, typecode)
+        a.datas.append((dist_info_path, dist_info_name, 'DATA'))
 
-# 同时查找并添加 streamlit 的其他元数据目录（如 streamlit-xxx.dist-info）
+# 同时查找并添加 streamlit 的其他元数据目录
 site_packages = os.path.dirname(streamlit_path)
-for item in os.listdir(site_packages):
-    if item.startswith('streamlit-') and item.endswith('.dist-info'):
-        full_path = os.path.join(site_packages, item)
-        if os.path.isdir(full_path):
-            # 检查是否已添加
-            already_added = any(d[1] == item for d in a.datas)
-            if not already_added:
-                a.datas.append((full_path, item))
+if os.path.exists(site_packages):
+    for item in os.listdir(site_packages):
+        if item.startswith('streamlit-') and item.endswith('.dist-info'):
+            full_path = os.path.join(site_packages, item)
+            if os.path.isdir(full_path):
+                # 检查是否已添加（比较 src_path）
+                already_added = any(d[0] == full_path for d in a.datas)
+                if not already_added:
+                    a.datas.append((full_path, item, 'DATA'))
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=cipher)
 
