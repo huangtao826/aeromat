@@ -12,22 +12,13 @@ cd /d "%~dp0"
 
 REM 检查虚拟环境
 if not exist "venv" (
-    echo [错误] 未找到虚拟环境
-    echo 请重新解压程序
-    pause
-    exit /b 1
+    echo [创建] 首次运行，正在创建环境...
+    python -m venv venv
 )
 
-REM 激活虚拟环境
-echo [启动] 激活Python环境...
-call venv\Scripts\activate.bat
-
-REM 检查streamlit
-python -c "import streamlit" 2>nul
-if errorlevel 1 (
-    echo [安装] 正在安装依赖...
-    pip install streamlit pandas plotly requests
-)
+echo [安装] 安装依赖...
+call venv\Scripts\pip.exe install --upgrade pip
+call venv\Scripts\pip.exe install streamlit pandas plotly requests
 
 echo.
 echo ======================================
@@ -37,7 +28,7 @@ echo ======================================
 echo.
 
 REM 启动streamlit
-python -m streamlit run app.py --server.port 8501 --browser.gatherUsageStats false
+call venv\Scripts\python.exe -m streamlit run app.py --server.port 8501 --browser.gatherUsageStats false
 
 echo.
 echo [错误] 程序已退出
